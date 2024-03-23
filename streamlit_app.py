@@ -43,7 +43,7 @@ def computeSequence(cd28FileName):
 
 
 # Page
-st.set_page_config(page_title='GC-Content')
+st.set_page_config(page_title='GC-Computer')
 st.title('GC-Content')
 
 # Text Calculator
