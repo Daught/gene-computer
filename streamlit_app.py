@@ -1,50 +1,60 @@
+import asyncio
 import streamlit as st
 import numpy as np
 import pandas as pd
 import altair as alt
 
-# Page title
-st.set_page_config(page_title='Interactive Data Explorer', page_icon='📊')
-st.title('📊 Interactive Data Explorer')
+def calcOccurence(charTotalCount, gcContentCount):
+    return (gcContentCount / charTotalCount) * 100
 
-with st.expander('About this app'):
-  st.markdown('**What can this app do?**')
-  st.info('This app shows the use of Pandas for data wrangling, Altair for chart creation and editable dataframe for data interaction.')
-  st.markdown('**How to use the app?**')
-  st.warning('To engage with the app, 1. Select genres of your interest in the drop-down selection box and then 2. Select the year duration from the slider widget. As a result, this should generate an updated editable DataFrame and line plot.')
-  
-st.subheader('Which Movie Genre performs ($) best at the box office?')
+def count_characters_in_string(string):
+    return sum([len(word) for word in string.split()])
 
-# Load data
-df = pd.read_csv('data/movies_genres_summary.csv')
-df.year = df.year.astype('int')
+async def countGcContent(sequence, charTotalCount, gcContentCount):
+    targetCharG = 'G'
+    targetCharC = 'C'
+    gcContentCount += sequence.count(targetCharC)
+    gcContentCount += sequence.count(targetCharG)    
+    charTotalCount += count_characters_in_string(sequence)
+    return charTotalCount, gcContentCount
 
-# Input widgets
-## Genres selection
-genres_list = df.genre.unique()
-genres_selection = st.multiselect('Select genres', genres_list, ['Action', 'Adventure', 'Biography', 'Comedy', 'Drama', 'Horror'])
+def computeSequence(cd28FileName):
+    first = True
+    gcContentCount = 0
+    charTotalCount = 0
+    
+    for line in cd28FileName:
+        line = line.decode("utf-8").rstrip('\n')        
+        line = line.upper()
+        if line.startswith('>'):
+            if not first:
+                # show percentage of current sequence            
+                st.info(calcOccurence(charTotalCount, gcContentCount))
+                charTotalCount = 0 # reset counter(s)
+                gcContentCount = 0
+            st.write(str(line))  # print sequence-header            
+            first = False
+        else:
+            charTotalCount, gcContentCount = asyncio.run(countGcContent(line, charTotalCount, gcContentCount))
+    
+    # show percentage of last sequence    
+    st.info(calcOccurence(charTotalCount, gcContentCount))    
 
-## Year selection
-year_list = df.year.unique()
-year_selection = st.slider('Select year duration', 1986, 2006, (2000, 2016))
-year_selection_list = list(np.arange(year_selection[0], year_selection[1]+1))
-
-df_selection = df[df.genre.isin(genres_selection) & df['year'].isin(year_selection_list)]
-reshaped_df = df_selection.pivot_table(index='year', columns='genre', values='gross', aggfunc='sum', fill_value=0)
-reshaped_df = reshaped_df.sort_values(by='year', ascending=False)
 
 
-# Display DataFrame
+# Page
+st.set_page_config(page_title='GC-Content')
+st.title('GC-Content')
 
-df_editor = st.data_editor(reshaped_df, height=212, use_container_width=True,
-                            column_config={"year": st.column_config.TextColumn("Year")},
-                            num_rows="dynamic")
-df_chart = pd.melt(df_editor.reset_index(), id_vars='year', var_name='genre', value_name='gross')
+# Text Calculator
+sequence_from_text_area = st.text_area('Upload a sequence in fasta format', height=300)    
+if st.button('Calculate'):    
+    charTotalCount = 0
+    gcContentCount = 0    
+    charTotalCount, gcContentCount = asyncio.run(countGcContent(sequence_from_text_area, charTotalCount, gcContentCount))    
+    st.info(calcOccurence(charTotalCount, gcContentCount))
 
-# Display chart
-chart = alt.Chart(df_chart).mark_line().encode(
-            x=alt.X('year:N', title='Year'),
-            y=alt.Y('gross:Q', title='Gross earnings ($)'),
-            color='genre:N'
-            ).properties(height=320)
-st.altair_chart(chart, use_container_width=True)
+# File Calculator
+cd28FileName = st.file_uploader('Choose a file')
+if cd28FileName is not None:    
+    computeSequence(cd28FileName)
