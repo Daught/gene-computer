@@ -58,7 +58,7 @@ sequence_from_text_area = st.text_area('Upload a sequence in fasta format', heig
 
 if st.button('Calculate'):        
     if check_cd28_format(sequence_from_text_area):
-        st.warning("String contains invalid characters. Expecting the sequence to contain: 'ACGT' characters only")
+        st.warning("String contains invalid characters. Expecting the sequence to contain: 'ACGT', whitespace and newline characters only")
     else:
         charTotalCount = 0
         gcContentCount = 0
