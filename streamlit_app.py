@@ -3,6 +3,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import altair as alt
+import re
 
 def calcOccurence(charTotalCount, gcContentCount):
     return (gcContentCount / charTotalCount) * 100
@@ -29,7 +30,7 @@ def computeSequence(cd28FileName):
         if line.startswith('>'):
             if not first:
                 # show percentage of current sequence            
-                st.info(calcOccurence(charTotalCount, gcContentCount))
+                st.success(calcOccurence(charTotalCount, gcContentCount))
                 charTotalCount = 0 # reset counter(s)
                 gcContentCount = 0
             st.write(str(line))  # print sequence-header            
@@ -40,7 +41,13 @@ def computeSequence(cd28FileName):
     # show percentage of last sequence    
     st.info(calcOccurence(charTotalCount, gcContentCount))    
 
-
+def check_cd28_format(input_string):    
+    allowed_characters = 'ACGT \t\n'
+    pattern = re.compile('[^{}]'.format(re.escape(allowed_characters)))
+    if pattern.search(input_string):
+        return True
+    else:
+        return False
 
 # Page
 st.set_page_config(page_title='GC-Computer')
@@ -48,11 +55,15 @@ st.title('GC-Content')
 
 # Text Calculator
 sequence_from_text_area = st.text_area('Upload a sequence in fasta format', height=300)    
-if st.button('Calculate'):    
-    charTotalCount = 0
-    gcContentCount = 0    
-    charTotalCount, gcContentCount = asyncio.run(countGcContent(sequence_from_text_area, charTotalCount, gcContentCount))    
-    st.info(calcOccurence(charTotalCount, gcContentCount))
+
+if st.button('Calculate'):        
+    if check_cd28_format(sequence_from_text_area):
+        st.warning("String contains invalid characters. Expecting the sequence to contain: 'ACGT' characters only")
+    else:
+        charTotalCount = 0
+        gcContentCount = 0
+        charTotalCount, gcContentCount = asyncio.run(countGcContent(sequence_from_text_area, charTotalCount, gcContentCount))    
+        st.success(calcOccurence(charTotalCount, gcContentCount))
 
 # File Calculator
 cd28FileName = st.file_uploader('Choose a file')
