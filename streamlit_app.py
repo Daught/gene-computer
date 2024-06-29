@@ -56,7 +56,10 @@ st.title('GC-Content')
 # Text Calculator
 sequence_from_text_area = st.text_area('Upload a sequence in fasta format', height=300)    
 
-if st.button('Calculate'):        
+if st.button('Calculate'):
+    if(sequence_from_text_area.isnull() | (sequence_from_text_area == ''):
+        st.warning("String contains invalid characters. Expecting the sequence to contain: 'ACGT', whitespace and newline characters only")
+       
     if check_cd28_format(sequence_from_text_area):
         st.warning("String contains invalid characters. Expecting the sequence to contain: 'ACGT', whitespace and newline characters only")
     else:
